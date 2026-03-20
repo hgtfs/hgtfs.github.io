@@ -4,7 +4,15 @@ const FooterSection = () => {
       <div className="container flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="font-display font-bold text-foreground">HGTFS</div>
         <p className="text-sm font-body text-muted-foreground">
-          Historical General Transit Feed Specification — Open source, open data.
+          Made with ❤️ in Bologna by{" "}
+          <a
+            href="https://www.openhistorymap.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            OpenHistoryMap
+          </a>
         </p>
         <a
           href="https://github.com/hgtfs"

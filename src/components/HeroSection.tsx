@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import heroMap from "@/assets/hero-map.jpg";
 
 const HeroSection = () => {
@@ -49,12 +50,12 @@ const HeroSection = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </a>
-            <a
-              href="#about"
+            <Link
+              to="/reference"
               className="inline-flex items-center gap-2 px-6 py-3 border border-border text-foreground font-body font-medium rounded-sm hover:bg-muted transition-colors"
             >
-              Learn More
-            </a>
+              Reference
+            </Link>
           </div>
         </motion.div>
 

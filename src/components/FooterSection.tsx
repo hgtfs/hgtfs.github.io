@@ -7,7 +7,7 @@ const FooterSection = () => {
           Historical General Transit Feed Specification — Open source, open data.
         </p>
         <a
-          href="https://github.com"
+          href="https://github.com/hgtfs"
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm font-body text-primary hover:underline"

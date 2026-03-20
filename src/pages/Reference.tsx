@@ -17,7 +17,7 @@ const stagger = (i: number) => ({
 interface FieldDef {
   name: string;
   type: string;
-  presence: "Required" | "Optional" | "Conditionally Required";
+  presence: "Required" | "Optional" | "Conditionally Required" | "Recommended";
   description: string;
 }
 

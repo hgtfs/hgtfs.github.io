@@ -14,14 +14,19 @@ const FooterSection = () => {
             OpenHistoryMap
           </a>
         </p>
-        <a
-          href="https://github.com/hgtfs"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-body text-primary hover:underline"
-        >
-          GitHub →
-        </a>
+        <div className="flex items-center gap-5">
+          <a href="/viewer/" className="text-sm font-body text-primary hover:underline">
+            Viewer
+          </a>
+          <a
+            href="https://github.com/hgtfs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-body text-primary hover:underline"
+          >
+            GitHub →
+          </a>
+        </div>
       </div>
     </footer>
   );

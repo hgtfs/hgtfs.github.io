@@ -271,6 +271,7 @@ const Reference = () => {
           <div className="flex items-center gap-6 text-sm font-body">
             <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">Home</Link>
             <span className="text-foreground font-medium">Reference</span>
+            <a href="/viewer/" className="text-muted-foreground hover:text-foreground transition-colors">Viewer</a>
             <a
               href="https://github.com/hgtfs"
               target="_blank"

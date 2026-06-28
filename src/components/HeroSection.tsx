@@ -50,6 +50,15 @@ const HeroSection = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </a>
+            <a
+              href="/viewer/"
+              className="inline-flex items-center gap-2 px-6 py-3 border border-primary text-primary font-body font-medium rounded-sm hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              Live Viewer
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </a>
             <Link
               to="/reference"
               className="inline-flex items-center gap-2 px-6 py-3 border border-border text-foreground font-body font-medium rounded-sm hover:bg-muted transition-colors"

@@ -44,6 +44,9 @@ const datasetFiles: { name: string; presence: string; description: string; id: s
   { id: "transfers", name: "transfers.txt", presence: "Optional", description: "Rules for making connections at transfer points between routes." },
   { id: "feed_info", name: "feed_info.txt", presence: "Recommended", description: "Dataset metadata, including publisher, version, and temporal coverage." },
   { id: "historical_sources", name: "historical_sources.txt", presence: "Recommended", description: "HGTFS extension. Bibliographic references and archival sources used to compile the dataset." },
+  { id: "network_edges", name: "network_edges.txt", presence: "Optional", description: "HGTFS extension. The network as a dated graph of edges between stops, for connectivity and accessibility analysis." },
+  { id: "route_operators", name: "route_operators.txt", presence: "Optional", description: "HGTFS extension. The operator of each route over time (mergers, nationalisations)." },
+  { id: "events", name: "events.txt", presence: "Optional", description: "HGTFS extension. Historical context that frames and annotates the timeline; may reference PeriodO." },
 ];
 
 const fileDefinitions: FileDef[] = [
@@ -53,15 +56,16 @@ const fileDefinitions: FileDef[] = [
     presence: "Required",
     description: "Identifies the transit operator or historical authority responsible for the service.",
     primaryKey: "agency_id",
-    hgtfsNote: "For historical datasets, the agency may represent a dissolved company, a government postal service, or a private coaching firm. Use agency_name to record the historical name, not a modern equivalent.",
+    hgtfsNote: "An agency may be a dissolved company, a government service, or a private firm. Use agency_name for the historical name, not a modern equivalent. Operators come and go: date_opened / date_closed model the operator's own lifespan, while route_operators.txt records which operator ran a given line over time.",
     fields: [
       { name: "agency_id", type: "Unique ID", presence: "Required", description: "Uniquely identifies a transit agency or operator." },
       { name: "agency_name", type: "Text", presence: "Required", description: "Full historical name of the transit operator." },
       { name: "agency_url", type: "URL", presence: "Optional", description: "URL of a reference page about this operator. May link to a Wikipedia article or archival record." },
       { name: "agency_timezone", type: "Timezone", presence: "Required", description: "Timezone of the agency. For pre-timezone-standardization periods, use the closest modern equivalent." },
       { name: "agency_lang", type: "Language code", presence: "Optional", description: "Primary language used by this agency (IETF BCP 47)." },
-      { name: "agency_start_date", type: "Date (YYYY)", presence: "Recommended", description: "HGTFS extension. Year the operator began service." },
-      { name: "agency_end_date", type: "Date (YYYY)", presence: "Optional", description: "HGTFS extension. Year the operator ceased service, if applicable." },
+      { name: "date_opened", type: "Date", presence: "Recommended", description: "HGTFS extension. Date the operator began service (YYYYMMDD). Unifies temporal validity across all HGTFS files." },
+      { name: "date_closed", type: "Date", presence: "Optional", description: "HGTFS extension. Date the operator ceased service, if applicable. Assert only with positive evidence." },
+      { name: "agency_note", type: "Text", presence: "Optional", description: "HGTFS extension. Free-text note on the operator — era, lineage, or sourcing." },
     ],
   },
   {
@@ -70,7 +74,7 @@ const fileDefinitions: FileDef[] = [
     presence: "Required",
     description: "Defines locations where vehicles pick up or drop off passengers — stations, coaching inns, post houses, or simple stops.",
     primaryKey: "stop_id",
-    hgtfsNote: "Historical stop locations may have significant positional uncertainty. Use location_accuracy to document confidence. Names should reflect the period-appropriate toponym.",
+    hgtfsNote: "Stops carry both spatial and temporal uncertainty. Use location_accuracy for position, and date_opened with its min/max bounds and date_precision for when the stop entered service. Names should reflect the period-appropriate toponym.",
     fields: [
       { name: "stop_id", type: "Unique ID", presence: "Required", description: "Uniquely identifies a stop or station." },
       { name: "stop_name", type: "Text", presence: "Required", description: "Period-appropriate name of the stop." },
@@ -80,6 +84,11 @@ const fileDefinitions: FileDef[] = [
       { name: "location_type", type: "Enum", presence: "Optional", description: "0 = Stop/platform, 1 = Station. Same as GTFS." },
       { name: "parent_station", type: "Foreign ID", presence: "Optional", description: "References stop_id of the parent station." },
       { name: "location_accuracy", type: "Enum", presence: "Recommended", description: "HGTFS extension. 0 = Exact, 1 = Approximate (within 500m), 2 = Estimated (within 5km), 3 = Unknown." },
+      { name: "date_opened", type: "Date", presence: "Recommended", description: "HGTFS extension. Best-estimate opening date (YYYYMMDD); a lower bound when uncertain ('open by this date')." },
+      { name: "date_opened_min", type: "Date", presence: "Optional", description: "HGTFS extension. Earliest the stop could have opened (lower bracket)." },
+      { name: "date_opened_max", type: "Date", presence: "Optional", description: "HGTFS extension. Latest it could have opened — typically the first date observed in service." },
+      { name: "date_precision", type: "Text", presence: "Optional", description: "HGTFS extension. Resolution of the opening date (e.g. exact, open_by_1876, window_1886_1899)." },
+      { name: "date_closed", type: "Date", presence: "Optional", description: "HGTFS extension. Closure date — only when positively evidenced; absence from a later source is not closure." },
     ],
   },
   {
@@ -97,6 +106,8 @@ const fileDefinitions: FileDef[] = [
       { name: "route_desc", type: "Text", presence: "Optional", description: "Description of the route's purpose or history." },
       { name: "route_type", type: "Enum", presence: "Required", description: "Type of vehicle. Standard GTFS values plus HGTFS extensions: 1400 = Stagecoach, 1401 = Mail coach, 1402 = Horse-drawn omnibus, 1403 = Horse-drawn tram, 1404 = Canal packet boat, 1405 = Steam railway, 1406 = Early motorbus." },
       { name: "route_color", type: "Color", presence: "Optional", description: "Hex color for display." },
+      { name: "date_opened", type: "Date", presence: "Recommended", description: "HGTFS extension. When the line entered service (YYYYMMDD); a lower bound when uncertain." },
+      { name: "date_closed", type: "Date", presence: "Optional", description: "HGTFS extension. When the line closed, if known." },
     ],
   },
   {
@@ -168,6 +179,55 @@ const fileDefinitions: FileDef[] = [
       { name: "source_notes", type: "Text", presence: "Optional", description: "Free-text notes on reliability, coverage, or transcription method." },
     ],
   },
+  {
+    id: "network_edges",
+    name: "network_edges.txt",
+    presence: "Optional",
+    description: "HGTFS extension. The transit network as a dated graph: edges between stops, for connectivity and accessibility analysis.",
+    primaryKey: "from_stop_id, to_stop_id, route_id",
+    hgtfsNote: "Models the network as an undirected graph of dated edges keyed on stop_id — the layer connectivity and market-access metrics need. Geometry may be schematic (straight stop-to-stop) where true alignments are unavailable; provide precise geometry via shapes.txt.",
+    fields: [
+      { name: "from_stop_id", type: "Foreign ID", presence: "Required", description: "References stops.stop_id — one endpoint of the segment." },
+      { name: "to_stop_id", type: "Foreign ID", presence: "Required", description: "References stops.stop_id — the other endpoint." },
+      { name: "route_id", type: "Foreign ID", presence: "Optional", description: "The line this segment belongs to. References routes.route_id." },
+      { name: "date_opened", type: "Date", presence: "Recommended", description: "When the segment entered service (YYYYMMDD); a lower bound when uncertain." },
+      { name: "date_closed", type: "Date", presence: "Optional", description: "When the segment closed, if known." },
+      { name: "evidence", type: "Enum", presence: "Optional", description: "dated_line = opening derived from a dated source; current_only = topology known but undated." },
+      { name: "line_name", type: "Text", presence: "Optional", description: "Human-readable name of the line." },
+    ],
+  },
+  {
+    id: "route_operators",
+    name: "route_operators.txt",
+    presence: "Optional",
+    description: "HGTFS extension. The operator of each route over time — a route may pass between operators (mergers, nationalisations).",
+    primaryKey: "route_id, agency_id, valid_from",
+    hgtfsNote: "routes.agency_id holds a single canonical operator (e.g. the latest within the study window) for GTFS compatibility; this file records the full time-varying assignment. Where the operator is genuinely unresolved, use an explicit placeholder agency_id rather than guessing.",
+    fields: [
+      { name: "route_id", type: "Foreign ID", presence: "Required", description: "References routes.route_id." },
+      { name: "agency_id", type: "Foreign ID", presence: "Required", description: "Operator during this interval. References agency.agency_id (or an explicit unresolved placeholder)." },
+      { name: "valid_from", type: "Date", presence: "Required", description: "Start of this operator's tenure on the route (YYYYMMDD)." },
+      { name: "valid_to", type: "Date", presence: "Optional", description: "End of tenure; empty if still current." },
+      { name: "source", type: "Text", presence: "Optional", description: "Provenance of the assignment (e.g. rule, wikidata)." },
+      { name: "confidence", type: "Enum", presence: "Optional", description: "high, medium, or low confidence in the assignment." },
+    ],
+  },
+  {
+    id: "events",
+    name: "events.txt",
+    presence: "Optional",
+    description: "HGTFS extension. Significant historical moments that frame and annotate a feed's timeline.",
+    primaryKey: "event_id",
+    hgtfsNote: "A viewer can use the events' min/max date as its temporal window and surface each moment as the user scrubs. period_uri links a moment to a scholarly period definition (e.g. PeriodO) for linked-data interoperability. Curated and editable.",
+    fields: [
+      { name: "event_id", type: "Unique ID", presence: "Required", description: "Uniquely identifies an event." },
+      { name: "date", type: "Date", presence: "Required", description: "Date of the moment, or the start of a period (YYYYMMDD)." },
+      { name: "end_date", type: "Date", presence: "Optional", description: "End date, for events that span a period (e.g. a war)." },
+      { name: "name", type: "Text", presence: "Required", description: "Short label for the moment." },
+      { name: "description", type: "Text", presence: "Optional", description: "Free-text historical context." },
+      { name: "period_uri", type: "URI", presence: "Optional", description: "A PeriodO (or other gazetteer) period-definition URI for this moment." },
+    ],
+  },
 ];
 
 const fieldTypes = [
@@ -184,6 +244,7 @@ const fieldTypes = [
   { name: "Time", description: "HH:MM:SS format. Times after midnight may exceed 24:00:00." },
   { name: "Timezone", description: "A TZ timezone identifier (e.g. Europe/Rome)." },
   { name: "Unique ID", description: "An internal ID, unique within its file. UTF-8, printable ASCII recommended." },
+  { name: "URI", description: "A resolvable identifier URI — e.g. a PeriodO period definition (http://n2t.net/ark:/99152/...)." },
   { name: "URL", description: "A fully qualified URL including http:// or https://." },
 ];
 
@@ -264,6 +325,7 @@ const Reference = () => {
         <motion.section {...fadeIn} className="mb-16">
           <h2 className="text-2xl font-display font-bold text-foreground mb-6">Table of Contents</h2>
           <ol className="list-decimal list-inside space-y-1.5 font-body text-sm text-muted-foreground">
+            <li><a href="#temporal-model" className="text-primary hover:underline">The HGTFS Temporal Model</a></li>
             <li><a href="#dataset-files" className="text-primary hover:underline">Dataset Files</a></li>
             <li><a href="#field-types" className="text-primary hover:underline">Field Types</a></li>
             <li>
@@ -277,6 +339,48 @@ const Reference = () => {
               </ul>
             </li>
           </ol>
+        </motion.section>
+
+        {/* Temporal Model */}
+        <motion.section {...fadeIn} id="temporal-model" className="mb-16 scroll-mt-20">
+          <h2 className="text-2xl font-display font-bold text-foreground mb-6">The HGTFS Temporal Model</h2>
+          <div className="space-y-4 font-body text-sm text-muted-foreground leading-relaxed">
+            <p>
+              GTFS describes a network that exists <em>now</em>. HGTFS adds one idea on top: every entity is{" "}
+              <span className="text-foreground font-medium">valid over a span of time</span>. Stops, routes,
+              agencies and network edges all carry <code className="font-mono text-xs text-foreground">date_opened</code> and{" "}
+              <code className="font-mono text-xs text-foreground">date_closed</code>, so a feed is no longer a
+              snapshot but a history you can scrub through.
+            </p>
+            <p>
+              <span className="text-foreground font-medium">Dates are usually uncertain.</span> Historical
+              evidence rarely gives an exact day, and HGTFS represents this honestly:{" "}
+              <code className="font-mono text-xs text-foreground">date_opened</code> is a GTFS-valid best
+              estimate — a lower bound, "open by this date" — bracketed by{" "}
+              <code className="font-mono text-xs text-foreground">date_opened_min</code> /{" "}
+              <code className="font-mono text-xs text-foreground">date_opened_max</code> and a{" "}
+              <code className="font-mono text-xs text-foreground">date_precision</code> label.{" "}
+              <code className="font-mono text-xs text-foreground">date_closed</code> is asserted only with
+              positive evidence — absence from a later source is not closure.
+            </p>
+            <p>
+              <span className="text-foreground font-medium">The network is a graph.</span> Beyond stops and
+              routes, <code className="font-mono text-xs text-foreground">network_edges.txt</code> records dated
+              edges between stops — the layer connectivity and accessibility analysis needs. Because operators
+              change over time, <code className="font-mono text-xs text-foreground">route_operators.txt</code>{" "}
+              records who ran each line and when, while{" "}
+              <code className="font-mono text-xs text-foreground">routes.agency_id</code> keeps a single
+              canonical operator for GTFS compatibility.
+            </p>
+            <p>
+              <span className="text-foreground font-medium">Context is data.</span> An optional{" "}
+              <code className="font-mono text-xs text-foreground">events.txt</code> places significant moments on
+              the timeline; a viewer can use their span as its temporal window and link each moment, via{" "}
+              <code className="font-mono text-xs text-foreground">period_uri</code>, to a scholarly period
+              definition such as{" "}
+              <a href="https://perio.do" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">PeriodO</a>.
+            </p>
+          </div>
         </motion.section>
 
         {/* Dataset Files */}
